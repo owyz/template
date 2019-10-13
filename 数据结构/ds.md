@@ -1,3 +1,7 @@
+## 并查集
+
+
+
 ## st表
 
 ```cpp
@@ -60,4 +64,50 @@ inline void change(int i,int val)
 ```
 
 ### 可持久化线段树
+
+```cpp
+//区间第k大
+int root[maxn];
+struct Node{int lc,rc,num;}tree[maxn*20];
+int tcnt;
+
+int main()
+{
+    //init
+    tcnt=1;
+    root[0]=0,tree[0]={0,0,0};//save node[0]
+
+    for(int i=1;i<=n;i++){
+        root[i]=root[i-1];
+        insert(a[i],root[i],1,nn);
+    }
+}
+
+void insert(int num,int & rt,int l,int r)
+{
+    /******************/
+    tree[tcnt]=tree[rt];
+    tree[tcnt].sz++;//modify this node
+    rt=tcnt++;
+    /******************/
+    if(l==r)return;
+    
+    int mid=(l+r)>>1;
+    if(num<=mid) 
+        insert(num,tree[rt].lc,l,mid);
+    else 
+        insert(num,tree[rt].rc,mid+1,r);
+}
+
+int query(int rt1,int rt2,int k,int l,int r)
+{
+    if(l==r)return l;
+    int leftnum=tree[tree[rt2].lc].sz-tree[tree[rt1].lc].sz;
+    int mid=(l+r)>>1;
+    if(leftnum<k)
+        return query(tree[rt1].rc,tree[rt2].rc,k-leftnum,mid+1,r);
+    else
+        return query(tree[rt1].lc,tree[rt2].lc,k,l,mid);
+}
+```
 
