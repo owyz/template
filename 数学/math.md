@@ -139,10 +139,6 @@ long long LBase::kth(long long k)
 }
 ```
 
-
-
-# 数论
-
 ## 求逆元
 
 ### 线性递推
