@@ -175,6 +175,147 @@ void spfa(int s)
 
 4. 整数域：$\large A-B<C\iff A-B\le C-1$
 
+### k短路
+
+```cpp
+#include<queue>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+
+int n,m,ans=0;
+double E;
+
+struct Edge{
+    int next,to;
+    double w;
+}fe[200010],e[200010];//e存正向图，fe存反向图
+int head[200010]={0},cnt=1,fhead[200010]={0},fcnt=1;//带f的都用于存反向图
+void add(int u,int v,double w)
+{
+    e[cnt].to=v;
+    e[cnt].w=w;
+    e[cnt].next=head[u];
+    head[u]=cnt++;//给正向图加边
+
+    fe[fcnt].to=u;
+    fe[fcnt].w=w;
+    fe[fcnt].next=fhead[v];
+    fhead[v]=fcnt++;//给反向图加边
+}
+
+double dis[5010];//裸spfa
+bool inq[5010]={0};
+void spfa()
+{
+    for(int i=0;i<5010;i++) dis[i]=999999999.0;
+    dis[n]=0.0;
+    queue<int> q;
+    q.push(n);
+    inq[n]=1;
+    while(!q.empty())
+    {
+        int u=q.front();
+        q.pop();
+        inq[u]=0;
+        for(int i=fhead[u];i;i=fe[i].next)
+        {
+            int v=fe[i].to;
+            double w=fe[i].w;
+            if(dis[v]>dis[u]+w)
+            {
+                dis[v]=dis[u]+w;
+                if(!inq[v])
+                {
+                    inq[v]=1;
+                    q.push(v);
+                }
+            }
+        }
+    }
+}
+
+
+struct Heap{
+    double d;
+    int u;
+    bool operator > (const Heap &a)const{
+        return d>a.d;
+    }
+}heap[2000010],temp;//手敲优先队列
+int sz=1;//优先队列内元素数量+1，个人比较喜欢这种表示方法
+void pop()//删除堆顶，取出堆顶直接用heap[1]即可，我没写在pop()里
+{
+    sz--;
+    heap[1]=heap[sz];
+    heap[sz]={0,0};
+    int the=1,son=2;
+    while(son<sz)
+    {
+        if(heap[son]>heap[son+1]&&son+1<sz) son++;
+        if(heap[the]>heap[son]) swap(heap[the],heap[son]);
+        else break;
+        the=son;
+        son=the<<1;
+    }
+}
+void push(double dd,int uu)//加入一个元素，dd=f(uu)，dd、uu防止变量名冲突
+{
+    heap[sz]={dd,uu};
+    int the=sz++,fa=the>>1;
+    while(fa)
+    {
+        if(heap[fa]>heap[the]) swap(heap[the],heap[fa]);
+        else break;
+        the=fa;
+        fa>>=1;
+    }
+}
+
+void astar()
+{
+    push(dis[1],1);
+    while(sz>1)
+    {
+        int u=heap[1].u;
+        double dist=heap[1].d;//取出堆顶
+        pop();//删除堆顶
+        if(u==n)//n点出队，说明找到一条k短路
+        {
+            E-=dist;
+            if(E>=1e-6) ans++;
+            else return;
+            continue;
+        }
+        for(int i=head[u];i;i=e[i].next)//拓展与u相连的节点
+        {
+            int v=e[i].to;
+            double w=e[i].w;
+            push(dist-dis[u]+w+dis[v],v);
+        }
+    }
+}
+
+int main()
+{
+    //freopen("test.in","r",stdin);
+    scanf("%d%d%lf",&n,&m,&E);
+    for(int i=1,u,v;i<=m;i++)
+    {
+        double w;
+        scanf("%d%d%lf",&u,&v,&w);
+        add(u,v,w);
+    }
+    spfa();
+    astar();
+    printf("%d\n",ans);
+    return 0;
+}
+```
+
+
+
 ## 网络流
 
 ### dinic
