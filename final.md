@@ -53,8 +53,6 @@
    }
    ```
 
-   
-
 3. kmp求循环节
 
    `0 - i-1`的最大循环节为`i-next[i]`
@@ -94,7 +92,6 @@ int Manacher()
     return maxlen;
 }
 ```
-
 # 数据结构
 
 ## st表
@@ -118,8 +115,6 @@ int max(int l,int r){
     return std::max(st[a][lg[b-a+1]],st[b-(1<<lg[b-a+1])+1][lg[b-a+1]]);
 }
 ```
-
-
 
 ## zkw线段树
 
@@ -206,8 +201,6 @@ int query(int rt1,int rt2,int k,int l,int r)
 }
 ```
 
-
-
 ## 左偏树
 
 ```cpp
@@ -287,8 +280,6 @@ int main()
 }
 ```
 
-
-
 ## 二维树状数组
 
 ```cpp
@@ -358,7 +349,6 @@ int main()
 	return 0;
 }
 ```
-
 # 图论
 
 ## 最短路
@@ -677,8 +667,6 @@ int main()
 }
 ```
 
-
-
 ## 网络流
 
 ### dinic
@@ -929,8 +917,6 @@ int main()
 }
 ```
 
-
-
 ## 二分图
 
 1. 最大匹配数=最小点覆盖
@@ -983,6 +969,47 @@ int main()
 	}
 	printf("%d\n",ans);
 	return 0;
+}
+```
+
+## tarjian
+
+```cpp
+stack<int,vector<int> >stk;
+int dfn[maxn],low[maxn],instk[maxn],dfs;
+int block[maxn],blk;//i点所属的块
+
+for(int i=1;i<=n;i++)
+    if(!dfn[i])tarjan(i);
+void tarjan(int u)
+{
+    dfn[u]=low[u]=++dfs;
+    stk.push(u);
+    instk[u]=1;
+    for(int i=head[u],v;i!=-1;i=edge[i].next)
+    {
+        v=edge[i].v;
+        if(!dfn[v])
+        {
+            tarjan(v);
+            low[u]=min(low[u],low[v]);
+        }
+        else if(instk[v])
+            low[u]=min(low[u],dfn[v]);
+    }
+    
+    if(dfn[u]==low[u])
+    {
+        block[u]=++blk;
+        instk[u]=0;
+        while(stk.top()!=u)
+        {
+            block[stk.top()]=block[u];
+            instk[stk.top()]=0;
+            stk.pop();
+        }
+        stk.pop();//pop u
+    }
 }
 ```
 
@@ -1684,7 +1711,17 @@ void cdq(int l,int r)
 
 # 数学
 
-[TOC]
+## 欧拉降幂
+
+$\Large A^B \equiv\begin{equation}  
+\left\{  
+             \begin{array}{**lr**}  
+             A^{B\%\phi(C)} & gcd(A,C)=1 \\  
+             A^B & gcd(A,C)\not=1,B<\phi(C) \\  
+             A^{B\%\phi(C)+\phi(C)} &  gcd(A,C)\not=1,B\ge\phi(C)
+             \end{array}  
+\right.  
+\end{equation}\ (mod\ C)$
 
 ##  fft
 
@@ -1728,8 +1765,6 @@ int main()
     for(item:a)print((int)(item.real()+0.5))
 }
 ```
-
-
 
 ## 线性基
 
@@ -2058,6 +2093,23 @@ int main()
    >
    > [例2]木板切割==合并石子
    > 
+
+## 莫队
+```cpp
+int sz=sqrt(n);
+bool cmp(const node& a,const node& b){
+    if(a.l/sz==b.l/sz)
+        return a.r<b.r;
+    return a.l/sz<b.l/sz;
+}
+for(int i=0,l=1,r=0;i<v.size();i++){
+    	while(l>v[i].l)add(--l);
+        while(r<v[i].r)add(++r);
+        while(l<v[i].l)del(l++);
+        while(r>v[i].r)del(r--);
+        //get new ans
+}
+```
 
 ## 整体二分
 
