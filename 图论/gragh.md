@@ -147,15 +147,19 @@ void spfa(int s)
 ### floyd
 
 ```cpp
-long long dis[maxn][maxn];
-memset(dis,0x3f,sizeof(dis));
-for(int i=1;i<=n;i++)dis[i][i]=0;
-void floyd(int n)
-{
-    for(int k=1;k<=n;k++)
-        for(int i=1;i<=n;i++)
-            for(int j=1;j<=n;j++)
-                dis[i][j]=min(dis[i][j],dis[i][k]+dis[k][j]);
+ void floyd(){
+	int MinCost = inf;
+	for(int k=1;k<=n;k++)
+    {
+	    for(int i=1;i<k;i++)
+	        for(int j=i+1;j<k;j++)
+	            MinCost = min(MinCost,dis[i][j]+mp[i][k]+mp[k][j]);//更新k点之前枚举ij求经过ijk的最小环
+	    for(int i=1;i<=n;i++)
+	        for(int j=1;j<=n;j++)
+	            dis[i][j]=min(dis[i][j],dis[i][k]+dis[k][j]);      //松弛k点
+	}
+	if(MinCost==inf)puts("It's impossible.");
+	else printf("%d\n",MinCost);
 }
 ```
 
@@ -171,10 +175,233 @@ void floyd(int n)
 
 4. 整数域：$\large A-B<C\iff A-B\le C-1$
 
+### k短路
+
+```cpp
+#include<queue>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+
+int n,m,ans=0;
+double E;
+
+struct Edge{
+    int next,to;
+    double w;
+}fe[200010],e[200010];//e存正向图，fe存反向图
+int head[200010]={0},cnt=1,fhead[200010]={0},fcnt=1;//带f的都用于存反向图
+void add(int u,int v,double w)
+{
+    e[cnt].to=v;
+    e[cnt].w=w;
+    e[cnt].next=head[u];
+    head[u]=cnt++;//给正向图加边
+
+    fe[fcnt].to=u;
+    fe[fcnt].w=w;
+    fe[fcnt].next=fhead[v];
+    fhead[v]=fcnt++;//给反向图加边
+}
+
+double dis[5010];//裸spfa
+bool inq[5010]={0};
+void spfa()
+{
+    for(int i=0;i<5010;i++) dis[i]=999999999.0;
+    dis[n]=0.0;
+    queue<int> q;
+    q.push(n);
+    inq[n]=1;
+    while(!q.empty())
+    {
+        int u=q.front();
+        q.pop();
+        inq[u]=0;
+        for(int i=fhead[u];i;i=fe[i].next)
+        {
+            int v=fe[i].to;
+            double w=fe[i].w;
+            if(dis[v]>dis[u]+w)
+            {
+                dis[v]=dis[u]+w;
+                if(!inq[v])
+                {
+                    inq[v]=1;
+                    q.push(v);
+                }
+            }
+        }
+    }
+}
+
+
+struct Heap{
+    double d;
+    int u;
+    bool operator > (const Heap &a)const{
+        return d>a.d;
+    }
+}heap[2000010],temp;//手敲优先队列
+int sz=1;//优先队列内元素数量+1，个人比较喜欢这种表示方法
+void pop()//删除堆顶，取出堆顶直接用heap[1]即可，我没写在pop()里
+{
+    sz--;
+    heap[1]=heap[sz];
+    heap[sz]={0,0};
+    int the=1,son=2;
+    while(son<sz)
+    {
+        if(heap[son]>heap[son+1]&&son+1<sz) son++;
+        if(heap[the]>heap[son]) swap(heap[the],heap[son]);
+        else break;
+        the=son;
+        son=the<<1;
+    }
+}
+void push(double dd,int uu)//加入一个元素，dd=f(uu)，dd、uu防止变量名冲突
+{
+    heap[sz]={dd,uu};
+    int the=sz++,fa=the>>1;
+    while(fa)
+    {
+        if(heap[fa]>heap[the]) swap(heap[the],heap[fa]);
+        else break;
+        the=fa;
+        fa>>=1;
+    }
+}
+
+void astar()
+{
+    push(dis[1],1);
+    while(sz>1)
+    {
+        int u=heap[1].u;
+        double dist=heap[1].d;//取出堆顶
+        pop();//删除堆顶
+        if(u==n)//n点出队，说明找到一条k短路
+        {
+            E-=dist;
+            if(E>=1e-6) ans++;
+            else return;
+            continue;
+        }
+        for(int i=head[u];i;i=e[i].next)//拓展与u相连的节点
+        {
+            int v=e[i].to;
+            double w=e[i].w;
+            push(dist-dis[u]+w+dis[v],v);
+        }
+    }
+}
+
+int main()
+{
+    //freopen("test.in","r",stdin);
+    scanf("%d%d%lf",&n,&m,&E);
+    for(int i=1,u,v;i<=m;i++)
+    {
+        double w;
+        scanf("%d%d%lf",&u,&v,&w);
+        add(u,v,w);
+    }
+    spfa();
+    astar();
+    printf("%d\n",ans);
+    return 0;
+}
+```
+
+
+
 ## 网络流
 
 ### dinic
 
+#### 普通dinic
+
+```cpp
+#include<queue>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+
+int n,m,s,t;
+struct Edge{
+	int nxt,to,flow;
+}e[200010];
+int head[100010]={0},cnt=2;
+void add(int u,int v,int f)
+{
+	e[cnt]={head[u],v,f};
+	head[u]=cnt++;
+}
+
+int dis[100010];
+bool bfs()
+{
+	memset(dis,0,sizeof(dis));
+	std::queue<int> q;
+	q.push(s);
+	dis[s]=1;
+	while(!q.empty())
+	{
+		int u=q.front();
+		q.pop();
+		for(int i=head[u];i;i=e[i].nxt)
+		{
+			int v=e[i].to;
+			if(dis[v]||(!e[i].flow)) continue;
+			dis[v]=dis[u]+1;
+			q.push(v);
+		}
+	}
+	return dis[t]!=0;
+}
+int dfs(int u,int f)
+{
+	if(u==t||f==0)return f;
+	int flow_sum=0;
+	for(int i=head[u];i;i=e[i].nxt)
+	{
+		int v=e[i].to;
+		if(dis[v]!=dis[u]+1||!e[i].flow) continue;
+		int temp=dfs(v,std::min(f-flow_sum,e[i].flow));
+		e[i].flow-=temp;
+		e[i^1].flow+=temp;
+		flow_sum+=temp;
+		if(flow_sum>=f) break;
+	}
+	if(!flow_sum) dis[u]=-1;
+	return flow_sum;
+}
+int dinic()
+{
+	int ans=0;
+	while(bfs())
+		while(int temp=dfs(s,0x7fffffff))
+			ans+=temp;
+	return ans;
+}
+
+
+int main()
+{
+	scanf("%d%d%d%d",&n,&m,&s,&t);
+	for(int i=1,u,v,w;i<=m;i++)
+	{
+		scanf("%d%d%d",&u,&v,&w);
+		add(u,v,w);
+		add(v,u,0);
+	}
+	printf("%d\n",dinic());
+	return 0;
+}
+```
+
+#### 当前弧优化
 ```cpp
 //O(N^2*M),二分图O(sqrt(N)*M)
 namespace NetFlow{
@@ -241,7 +468,7 @@ ll NetFlow::dfs(int u,ll maxflow)
             edge[i^1].w+=tmp;
             ans+=tmp;
             maxflow-=tmp;
-            if(!maxflow)break;//没什么软用(和优化1等效?)
+            if(!maxflow)break;
         }
     }
     if(!ans)deep[u]=-1;//优化2
@@ -252,60 +479,90 @@ ll NetFlow::dfs(int u,ll maxflow)
 ### 费用流
 
 ```cpp
-//1.求最短路
-//2.对s-t这一条最短路径进行增广
-int dis[MAXN];
-int pre[MAXN];
-bool vis[MAXN];
-queue<int>q;
-int sumvalue;
+/*输入的第一行包含四个正整数N、M、S、T，分别表示点的个数、有向边的个数、源点序号、汇点序号。
+接下来M行每行包含四个正整数ui、vi、wi、fi，表示第i条有向边从ui出发，到达vi，边权为wi（即该边最大流量为wi），单位流量的费用为fi。*/
+#include<queue>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+typedef pair<int,int> Pair;
+int n,m,s,t;
 
-inline void spfa()
+struct edge{
+    int next,to,flow,cost;
+}e[100010]={0};
+int head[5010]={0},cnt=2;
+inline void add(int u,int v,int f,int c)
 {
-    for(int i=0;i<sizeof(dis)/sizeof(int);i++)dis[i]=-INF;//dis
-    memset(vis,false,sizeof(vis));//vis
-    memset(pre,-1,sizeof(pre));//pre
-    for(dis[s]=0,vis[s]=true,q.push(s); !q.empty(); q.pop())
+    e[cnt]={head[u],v,f,c};
+    head[u]=cnt++;
+}
+
+int dis[5010]={0},pe[5010]={0},pp[5010]={0};
+bool inq[5010]={0};
+bool spfa()
+{
+    queue<int> q;//可优化一半时间
+    memset(dis,0x7f,sizeof(dis));
+    memset(inq,0,sizeof(inq));
+    q.push(s);inq[s]=1;dis[s]=0;
+    while(!q.empty())
     {
         int u=q.front();
-        for(int i=head[u];i!=-1;i=edge[i].nex)
+        q.pop();
+        inq[u]=0;
+        for(int i=head[u];i>1;i=e[i].next)
         {
-            if(edge[i].flow>0 && dis[edge[i].v]<dis[u]+edge[i].value)
+            if(e[i].flow<=0) continue;
+            int v=e[i].to;
+            if(dis[v]>dis[u]+e[i].cost)
             {
-                dis[edge[i].v]=dis[u]+edge[i].value;
-                pre[edge[i].v]=i;
-                if(!vis[edge[i].v])
+                dis[v]=dis[u]+e[i].cost;
+                pe[v]=i;
+                pp[v]=u;
+                if(!inq[v])
                 {
-                    q.push(edge[i].v);
-                    vis[edge[i].v]=true;
+                    q.push(v);
+                    inq[v]=1;
                 }
             }
         }
-        vis[u]=false;
     }
+    return dis[t]<0x7f7f7f7f;
 }
 
-inline void flow()
+Pair work()
 {
-    int flow=INF;
-    for(int i=pre[t];i!=-1 && edge[i].v!=s;i=pre[edge[i^1].v])//最短路径
-        flow=min(flow,edge[i].flow);
-
-    for(int i=pre[t];i!=-1 && edge[i].v!=s;i=pre[edge[i^1].v])//修改残余网络
+    int F=0,C=0;
+    while(spfa())
     {
-        edge[i].flow-=flow;
-        edge[i^1].flow+=flow;
-        sumvalue+=edge[i].value*flow;//修改答案
+        int f=0x7f7f7f7f;
+        for(int i=t;i!=s;i=pp[i])
+            f=min(f,e[pe[i]].flow);
+        F+=f;
+        C+=dis[t]*f;
+        for(int i=t;i!=s;i=pp[i])
+        {
+            e[pe[i]].flow-=f;
+            e[pe[i]^1].flow+=f;
+        }
     }
+    return {F,C};
 }
 
 int main()
 {
-    for(sumvalue=0;;){
-        spfa();
-        if(dis[t]<=0)break;
-        flow();
+    scanf("%d%d%d%d",&n,&m,&s,&t);
+    for(int i=1,u,v,f,c;i<=m;i++)
+    {
+        scanf("%d%d%d%d",&u,&v,&f,&c);
+        add(u,v,f,c);
+        add(v,u,0,-c);
     }
+    Pair ans=work();
+    printf("%d %d",ans.first,ans.second);
+    return 0;
 }
 ```
 
@@ -317,7 +574,136 @@ int main()
 2. 最大独立集=顶点数 - 最大匹配数
 3. 最小路径覆盖数=顶点数 - 原DAG图的拆点二分图的最大匹配数
 
+### 匈牙利
+
+```cpp
+#include<vector>
+#include<cstdio>
+#include<cstring>
+
+int n1,n2,m;
+
+struct men{
+	int lover;
+	std::vector<int> t;
+}man[1010];
+int woman[1010]={0};
+bool vis[1010];
+int dfs(int u)
+{
+	for(int i=0,sz=man[u].t.size();i<sz;i++)
+	{
+		int v=man[u].t[i];
+		if(vis[v]) continue;
+		vis[v]=1;
+		if(!woman[v]||dfs(woman[v]))
+		{
+			woman[v]=u;
+			return 1;
+		}
+	}
+	return 0;
+}
+int main()
+{
+	scanf("%d%d%d",&n1,&n2,&m);
+	for(int i=1,u,v;i<=m;i++)
+	{
+		scanf("%d%d",&u,&v);
+		man[u].t.push_back(v);
+	}
+	int ans=0;
+	for(int i=1;i<=n1;i++)
+	{
+		memset(vis,0,sizeof(vis));
+		ans+=dfs(i);
+	}
+	printf("%d\n",ans);
+	return 0;
+}
+```
+
+
+
+# 树
+
 ## LCA
+
+### tarjan并查集
+
+```cpp
+#include<stdio.h>
+
+int n,m,root;
+
+struct Edge{
+	int nxt,to;
+}e[2000010];
+int head[1000010]={0},cnt=1;
+void add(int u,int v)
+{
+	e[cnt]={head[u],v};
+	head[u]=cnt++;
+}
+struct Query{
+	int nxt,to,id;
+}q[2000010];
+int qhead[1000010]={0},qcnt=1;
+void add(int u,int v,int id)
+{
+	q[qcnt]={qhead[u],v,id};
+	qhead[u]=qcnt++;
+}
+
+int ans[1000010]={0};
+
+int fa[1000010]={0};
+int find(int x) {return (x==fa[x])?x:(fa[x]=find(fa[x]));}
+void uni(int x,int y)//x做根
+{
+	x=find(x);y=find(y);
+	fa[y]=x;
+}
+bool vis[1000010]={0};
+void dfs(int u,int fa)
+{
+	vis[u]=1;
+	for(int i=head[u];i;i=e[i].nxt)
+	{
+		int v=e[i].to;
+		if(vis[v]) continue;
+		dfs(v,u);
+	}
+	for(int i=qhead[u];i;i=q[i].nxt)
+	{
+		int v=q[i].to;
+		if(vis[v])
+			ans[q[i].id]=find(v);
+	}
+	uni(fa,u);
+}
+
+int main()
+{
+	scanf("%d%d%d",&n,&m,&root);
+	for(int i=1;i<=n;i++) fa[i]=i;
+	for(int i=1,u,v;i<n;i++)
+	{
+		scanf("%d%d",&u,&v);
+		add(u,v);
+		add(v,u);
+	}
+	for(int i=1,u,v;i<=m;i++)
+	{
+		scanf("%d%d",&u,&v);
+		add(u,v,i);
+		add(v,u,i);
+	}
+	dfs(root,root);
+	for(int i=1;i<=m;i++) printf("%d\n",ans[i]);
+	return 0;
+}
+```
 
 ### 倍增
 
@@ -410,4 +796,179 @@ int main()
     return 0;
 }
 ```
+
+## 树链剖分
+
+```cpp
+#include<cstdio>
+#include<algorithm>
+
+int n,q;
+
+struct Edge{
+    int nxt,to;
+}e[60010];
+int head[30010],cnt=1;
+void add(int u,int v)
+{
+    e[cnt]={head[u],v};
+    head[u]=cnt++;
+    e[cnt]={head[v],u};
+    head[v]=cnt++;
+}
+struct Tree{
+    long long w;
+    int fa,dep,sz,wson,top,id;
+}t[30010];
+void dfs1(int u,int fa)
+{
+    t[u].fa=fa;
+    t[u].dep=t[fa].dep+1;
+    t[u].sz=1;
+    t[u].wson=0;
+    int maxn=0;
+    for(int i=head[u];i;i=e[i].nxt)
+    {
+        int v=e[i].to;
+        if(v==fa) continue;
+        dfs1(v,u);
+        int temp=t[v].sz;
+        t[u].sz+=temp;
+        if(temp>maxn)
+        {
+            t[u].wson=v;
+            maxn=temp;
+        }
+    }
+}
+int id=1;
+long long a[30010];
+void dfs2(int u,int top)
+{
+    t[u].top=top;
+    t[u].id=id;
+    a[id]=t[u].w;
+    id++;
+    if(!t[u].wson) return;
+    dfs2(t[u].wson,top);
+    for(int i=head[u];i;i=e[i].nxt)
+    {
+        int v=e[i].to;
+        if(v==t[u].fa||v==t[u].wson) continue;
+        dfs2(v,v);
+    }
+}
+struct SegTree{
+    int l,r;
+    long long sum,mx;
+}s[120010];
+inline void pushup(int x)
+{
+    s[x].sum=s[x<<1].sum+s[x<<1|1].sum;
+    s[x].mx=std::max(s[x<<1].mx,s[x<<1|1].mx);
+}
+void build(int x,int l,int r)
+{
+    s[x].l=l;
+    s[x].r=r;
+    if(l==r)
+    {
+        s[x].mx=s[x].sum=a[l];
+        return;
+    }
+    int mid=l+r>>1;
+    build(x<<1,l,mid);
+    build(x<<1|1,mid+1,r);
+    pushup(x);
+}
+void update(int x,int pos,long long k)
+{
+    if(s[x].l==s[x].r&&s[x].l==pos)
+    {
+        s[x].mx=s[x].sum=k;
+        return;
+    }
+    int mid=s[x].l+s[x].r>>1;
+    if(pos<=mid) update(x<<1,pos,k);
+    else update(x<<1|1,pos,k);
+    pushup(x);
+}
+long long quemx(int x,int l,int r)
+{
+    if(l<=s[x].l&&s[x].r<=r) return s[x].mx;
+    int mid=s[x].l+s[x].r>>1;
+    long long ans=-1e9;
+    if(l<=mid) ans=std::max(ans,quemx(x<<1,l,r));
+    if(r>mid) ans=std::max(ans,quemx(x<<1|1,l,r));
+    return ans;
+}
+long long quesum(int x,int l,int r)
+{
+    if(l<=s[x].l&&s[x].r<=r) return s[x].sum;
+    int mid=s[x].l+s[x].r>>1;
+    long long ans=0;
+    if(l<=mid) ans+=quesum(x<<1,l,r);
+    if(r>mid) ans+=quesum(x<<1|1,l,r);
+    return ans;
+}
+inline void change(int pos,long long k)
+{
+    update(1,t[pos].id,k);
+}
+long long qmax(int u,int v)
+{
+    long long ans=-99999999;
+    while(t[u].top!=t[v].top)
+    {
+        if(t[t[u].top].dep<t[t[v].top].dep) std::swap(u,v);
+        ans=std::max(ans,quemx(1,t[t[u].top].id,t[u].id));
+        u=t[t[u].top].fa;
+    }
+    if(t[u].id>t[v].id) std::swap(u,v);
+    ans=std::max(ans,quemx(1,t[u].id,t[v].id));
+    return ans;
+}
+long long qsum(int u,int v)
+{
+    long long ans=0;
+    while(t[u].top!=t[v].top)
+    {
+        if(t[t[u].top].dep<t[t[v].top].dep) std::swap(u,v);
+        ans+=quesum(1,t[t[u].top].id,t[u].id);
+        u=t[t[u].top].fa;
+    }
+    if(t[u].id>t[v].id) std::swap(u,v);
+    ans+=quesum(1,t[u].id,t[v].id);
+    return ans;
+}
+
+int main()
+{
+    //freopen("test.in","r",stdin);
+    scanf("%d",&n);
+    for(int i=1,u,v;i<n;i++)
+    {
+        scanf("%d%d",&u,&v);
+        add(u,v);
+    }
+    for(int i=1;i<=n;i++) scanf("%lld",&t[i].w);
+    dfs1(1,0);
+    dfs2(1,1);
+    build(1,1,n);
+    scanf("%d",&q);
+    while(q--)
+    {
+        char opt[20]={0};
+        int x,y;
+        scanf("%s%d%d",opt,&x,&y);
+        /*if(opt[1]=='H') change(x,(long long)y);
+        else if(opt[1]=='M') printf("%lld\n",qmax(x,y));
+        else printf("%lld\n",qsum(x,y));*/
+    }
+}
+```
+
+
+
+
 
