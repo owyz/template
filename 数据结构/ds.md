@@ -107,3 +107,156 @@ int query(int rt1,int rt2,int k,int l,int r)
 }
 ```
 
+
+
+## 左偏树
+
+```cpp
+//一开始有n只孤独的猴子，然后他们要打m次架，每次打架呢，都会拉上自己朋友最牛叉的出来跟别人打，打完之后战斗力就会减半，每次打完架就会成为朋友（正所谓不打不相识o(∩_∩)o ）。问每次打完架之后那俩猴子最牛叉的朋友战斗力还有多少，若朋友打架就输出-1
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+int n,m;
+struct ltree{
+    int l;
+    int r;
+    int dist;
+    int fa;
+    int key;
+}t[100010];
+int find(int x)
+{
+    return (x==t[x].fa)?x:(find(t[x].fa));
+}
+int merge(int x,int y)
+{
+    if(!x) return y;
+    if(!y) return x;
+    if(t[x].key<t[y].key) swap(x,y);
+    t[x].r=merge(t[x].r,y);
+    t[t[x].r].fa=x;
+    if(t[t[x].l].dist<t[t[x].r].dist) swap(t[x].l,t[x].r);
+    t[x].dist=t[t[x].r].dist+1;
+    return x;
+}
+int pop(int x)
+{
+    int l=t[x].l,r=t[x].r;
+    t[l].fa=l;
+    t[r].fa=r;
+    t[x].l=t[x].r=t[x].dist=0;
+    return merge(l,r);
+}
+void init()
+{
+	memset(t,0,sizeof(t));
+    t[0].dist=-1;
+    for(int i=1;i<=n;i++)
+    {
+        t[i].fa=i;
+        scanf("%d",&t[i].key);
+    }
+}
+int main()
+{
+    //freopen("test.in","r",stdin);
+    while(1==scanf("%d",&n))
+    {
+        init();
+        scanf("%d",&m);
+        for(int x,y,i=0;i<m;i++)
+        {
+			scanf("%d%d",&x,&y);
+			x=find(x);
+			y=find(y);
+			if(x==y)
+			{
+			   printf("-1\n");
+			   continue;
+			}
+			t[x].key>>=1;
+			t[y].key>>=1;
+			int x_son=pop(x),y_son=pop(y);
+			x_son=merge(x_son,x);
+			y_son=merge(y_son,y);
+			x_son=merge(x_son,y_son);
+			printf("%d\n",t[x_son].key);
+        }
+    }
+    return 0;
+}
+```
+
+
+
+## 二维树状数组
+
+```cpp
+#include<stdio.h>
+//矩阵单点修改、矩形区域查询
+const long long MOD=1e9+7;
+
+inline int lowbit(int x){return x&-x;}
+
+int n,m;
+long long c[1010][1010];
+
+void update(int x,int y,long long k)
+{
+	int yy=y;
+	while(x<=n)
+	{
+		y=yy;
+		while(y<=n)
+		{
+			c[x][y]+=k;
+			c[x][y]%=MOD;
+			y+=lowbit(y);
+		}
+		x+=lowbit(x);
+	}
+}
+long long que(int x,int y)
+{
+	int yy=y;
+	long long ans=0;
+	while(x)
+	{
+		y=yy;
+		while(y)
+		{
+			ans+=c[x][y];
+			ans%=MOD;
+			y-=lowbit(y);
+		}
+		x-=lowbit(x);
+	}
+	return ans;
+}
+
+int main()
+{
+	scanf("%d%d",&n,&m);
+	while(m--)
+	{
+		char opt[4];
+		int x,y,a,b;
+		scanf("\n%s",opt);
+		if(opt[0]=='A')
+		{
+			scanf("%d%d%d",&x,&y,&a);
+			x++,y++;
+			update(x,y,a);
+		}
+		else
+		{
+			scanf("%d%d%d%d",&x,&y,&a,&b);
+			a++,b++;
+			printf("%lld\n",((que(a,b)-que(a,y)-que(x,b)+que(x,y))%MOD+MOD)%MOD);
+		}
+	}
+	return 0;
+}
+```
+

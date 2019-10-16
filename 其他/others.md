@@ -5,6 +5,22 @@ scanf(" %[^\n]\n",str);
 ```
 
 ### 快读
+
+```cpp
+#define ch_top 10000000
+char ch[ch_top],*now_r=ch;
+void read(int &x) 
+{ while(*now_r<48)++now_r;
+  for (x=*now_r-48;*++now_r>=48;)
+   x= (x<<1)+(x<<3)+*now_r-48;
+}
+int main()
+{
+    fread(ch,1,ch_top,stdin);
+    //…………
+}
+```
+
 ```c++
 #include <cstdio>
 #include <cctype>
