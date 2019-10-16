@@ -91,3 +91,18 @@ func Clear()
 	exec '0,$d'
 endfunc
 ```
+
+### codeblocks
+
+#### 编辑
+
+1. 缩放： `ctrl + 滚轮`
+2. 注释/取消注释：`ctrl+shift+C`/`ctrl+shift+X`
+3. 整行(几行)移动：`alt+↑↓`
+4. 关键词（if/while等）补全：`ctrl+J`
+
+#### 编译调试
+
+1. 编译：`ctrl+F9`
+2. 编译当前文件
+
