@@ -349,6 +349,171 @@ int main()
 	return 0;
 }
 ```
+
+
+## splay tree
+
+```c++
+const int nn=1e5+10;
+int ch[nn][2],f[nn],size[nn],key[nn],cnt[nn];
+int sz,root;
+void clear(int x) {
+	ch[x][0]=ch[x][1]=f[x]=size[x]=key[x]=cnt[x]=0;
+}
+int get(int x) {
+	return ch[f[x]][1]==x;
+}
+void update(int x) {
+	if(x) {
+		size[x]=cnt[x];
+		if(ch[x][0])size[x]+=size[ch[x][0]];
+		if(ch[x][1])size[x]+=size[ch[x][1]];
+	}
+}
+void rotate(int x) {
+	int old=f[x],oldf=f[old],which=get(x);
+	f[ch[x][which^1]]=old;
+	ch[old][which]=ch[x][which^1];
+	f[old]=x;
+	ch[x][which^1]=old;
+	f[x]=oldf;
+	if(oldf) {
+		ch[oldf][ch[oldf][1]==old]=x;
+	}
+	update(old);
+	update(x);
+}
+void splay(int x) {
+	for(int fa; fa=f[x];) {
+		if(f[fa]) {
+			if(get(x)==get(fa)) {
+				rotate(fa);
+			} else {
+				rotate(x);
+			}
+		}
+		rotate(x);
+	}
+	root=x;
+}
+
+void insert(int x) { //insert and splay
+	if(root==0) {
+		sz++;
+		ch[sz][0]=ch[sz][1]=f[sz]=0;
+		size[sz]=cnt[sz]=1;
+		key[sz]=x;
+		root=sz;
+		return ;
+	}
+	int now=root,fa=0;
+	for(;;) {
+		if(x==key[now]) {
+			cnt[now]++;
+			update(now);
+			update(fa);
+			splay(now);
+			break;
+		}
+		fa=now;
+		now=ch[now][key[now]<x];
+		if(now==0) { //now is null
+			sz++;
+			ch[sz][0]=ch[sz][1]=0;
+			size[sz]=cnt[sz]=1;
+			key[sz]=x;
+			f[sz]=fa;
+			ch[fa][key[fa]<x]=sz;
+			update(fa);
+			splay(sz);
+			break;
+		}
+	}
+}
+
+int find(int x) {
+	int ans=0,now=root;
+	for(;;) {
+		if(x<key[now]) {
+			now=ch[now][0];
+		} else {
+			ans+=(ch[now][0]?size[ch[now][0]]:0);
+			if(x==key[now]) {
+				splay(now);// splay find x'th
+				return ans+1;
+			}
+			ans+=cnt[now];
+			now=ch[now][1];
+		}
+	}
+}
+
+int findx(int x) {
+	int now=root;
+	for(;;) {
+		if(ch[now][0]&&size[ch[now][0]]>=x) {
+			now=ch[now][0];
+		} else {
+			int temp=(ch[now][0]?size[ch[now][0]]:0)+cnt[now];
+			if(temp>=x) {
+				return key[now];
+			}
+			now=ch[now][1];
+			x-=temp;
+		}
+	}
+}
+int pre() { //root's pre
+	int now=ch[root][0];
+	while(ch[now][1]) {
+		now=ch[now][1];
+	}
+	return now;
+}
+int next() {
+	int now=ch[root][1];
+	while(ch[now][0]) {
+		now=ch[now][0];
+	}
+	return now;
+}
+void del(int x) {
+	find(x);
+	if(cnt[root]>1) {
+		cnt[root]--;
+		update(root);
+		return ;
+	}
+	if(!ch[root][0]&&!ch[root][1]) {
+		clear(root);
+		root=0;
+		return ;
+	}
+	if(!ch[root][0]) {
+		int oldroot=root;
+		root=ch[root][1];
+		f[root]=0;
+		clear(oldroot);
+		return;
+	} else if(!ch[root][1]) {
+		int oldroot=root;
+		root=ch[root][0];
+		f[root]=0;
+		clear(oldroot);
+		return;
+	}
+	// has two child
+	int leftbig=pre(),oldroot=root;
+	splay(leftbig);
+	ch[root][1]=ch[oldroot][1];
+	f[ch[oldroot][1]]=root;
+	clear(oldroot);
+	update(root);
+}
+```
+
+
+
 # 图论
 
 ## 最短路
@@ -1860,6 +2025,47 @@ long long LBase::kth(long long k)
 }
 ```
 
+## 区间线性基
+
+```c++
+int pos[maxn][33],b[maxn][33];
+bool ins(int h,int x){
+	for(int i=0;i<=30;i++){
+		b[h][i]=b[h-1][i];
+		pos[h][i]=pos[h-1][i];
+	}
+	int tmp=h;
+	for(int i=30;i>=0;i--){
+		if(x&(1<<i)){
+			if(b[h][i]){
+				if(tmp>pos[h][i]){
+					swap(tmp,pos[h][i]);
+					swap(b[h][i],x);
+				}
+				x^=b[h][i];
+			}
+			else{
+				b[h][i]=x;
+				pos[h][i]=tmp;
+				return true;
+			}
+			
+		}
+	}
+	return false;
+} 
+int ab[33];
+void get(int l,int r){
+	for(int i=0;i<=30;i++)ab[i]=0;
+	for(int i=0;i<=30;i++){
+		if(pos[r][i]>=l)ab[i]=b[r][i];
+	}
+	return;
+}
+```
+
+
+
 ## 求逆元
 
 ### 线性递推
@@ -1949,27 +2155,336 @@ for(int i=2;i<=MAXN;i++)
 3. p为质数且p不整除n时，$\varphi(n*p) =(p - 1) * \varphi(n)$
 
 ```cpp
-phi[1] = 1;
-for(int i = 2 ; i <= MAXN ; i++)
+const int maxn=1e7;
+int prime[maxn];//保存素数 
+int phi[maxn];
+int mu[maxn];
+int ola(int n) 
 {
-	if(!notprime[i])//是质数
+	int cnt=0;
+	phi[1]=1;
+	mu[1]=1;
+	for(int i=2;i<=n;i++)
 	{
-		prime[tot++] = i;
-		phi[i] = i - 1;
-	}
-	for(int j = 0 ; j < tot && i * prime[j] <= MAXN ; j++)
-	{
-		notprime[i * prime[j]] = true;
-		if(i % prime[j] == 0)
-        {
-			phi[i * prime[j]] = phi[i] * prime[j];
-			break;
+		if(!prime[i]){
+			prime[++cnt]=i;
+			phi[i]=i-1;
+			mu[i]=-1;
 		}
-		else
-			phi[i * prime[j]] = phi[i] * (prime[j] - 1);
+		for(int j=1;j<=cnt&&i*prime[j]<=n;j++)
+		{
+			prime[i*prime[j]]=1;
+			if(i%prime[j]==0)//关键 
+			{
+				mu[i*prime[j]]=0;
+				phi[i*prime[j]]=phi[i]*prime[j];
+				break;
+			}
+			else{
+				mu[i*prime[j]]=-mu[i];
+				phi[i*prime[j]]=phi[i]*(prime[j]-1);
+			}
+		}
 	}
+	return cnt;//返回小于等于n的素数的个数 
 }
 ```
+
+### 杜教筛
+
+求$\sum_{i=1}^n{{f(i)}}(n<=10^9)     $         $  O（n^{ \frac 2 3 } )$   
+
+构造h和g 好求前缀和,使$h=f*g$
+
+设$S(n)=\sum_{i=1}^{n}{f(i)}$
+
+$\sum_{i=1}^n{{f(i)}}=\sum_{i=1}^n\sum_{d=i}{g(d)*f(\frac{i}{d})}$
+
+​		   		$=\sum_{d=1}^n{g(d)\sum_{i=1}^{[\frac{n}d]}f(i)}$
+
+​		          $=g(1)S(n)+\sum_{d=2}^{n}{g(d)S([\frac n d ])}$
+
+移项得
+
+$g(1)S(n)=\sum_{i=1}^n{{f(i)}}-\sum_{d=2}^{n}{g(d)S([\frac n d ])}$
+
+
+
+```c++
+const int pren = 7.5e6; //预处理前面
+void prepare()
+{
+	ola(pren);
+
+
+unordered_map<int, ll> sphi; //用 哈希map可能比map快 o(1)
+unordered_map<int, int> smu;
+ll c_sphi(int n)
+{
+	if (n <= pren)
+	{
+		return phi[n];
+	}
+	auto it = sphi.find(n);
+	if (it != sphi.end())
+	{
+		return it->second;
+	}
+	ll res = ((ll)n * (n + 1)) >> 1;
+	for (ll d = 2, pos; d <= n; d = pos + 1)
+	{
+		pos = n / (n / d);
+		res -= (pos - d + 1) * c_sphi(n / d);
+	}
+	sphi[n] = res;
+	return res;
+}
+
+int c_smu(int n)
+{
+	if (n <= pren)
+	{
+		return mu[n];
+	}
+	auto it = smu.find(n);
+	if (it != smu.end())
+	{
+		return it->second;
+	}
+	int res = 1;
+	for (ll d = 2, pos; d <= n; d = pos + 1)
+	{
+		pos = n / (n / d);
+		res -= (pos - d + 1) * c_smu(n / d);
+	}
+	smu[n] = res;
+	return res;
+}
+```
+
+## 数论公式总结
+
+莫比乌斯反演是指
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20g%28n%29%3D%5Csum_%7Bd%7Cn%7Df%28d%29%20%5C%5C~~~~~f%28n%29%3D%5Csum_%7Bd%7Cn%7D%5Cmu%28d%29f%28%5Cfrac%7Bn%7D%7Bd%7D%29)
+
+狄利克雷卷积是指
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%28f%20%5Ctimes%20g%29%28n%29%3D%5Csum_%7Bd%7Cn%7Df%28d%29g%28%5Cfrac%7Bn%7D%7Bd%7D%29)
+
+所以莫比乌斯反演又可以写作
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20f%3Dg%20%5Ctimes%201%20%5C%5C~~~~~%20g%3D%20%5Cmu%20%5Ctimes%20f)
+
+顺便定义一下
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%28f%20&plus;%20g%29%28n%29%3Df%28n%29&plus;g%28n%29%20%5C%5C~~~~~~%28f%20*%20g%29%28n%29%3Df%28n%29*g%28n%29)
+
+常见数论函数
+
+欧拉函数
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%5Cvarphi%28n%29%3D%5Csum_i%5En%5Bgcd%28i%2Cn%29%3D1%5D)
+
+莫比乌斯函数
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%5Cmu%28n%29%3D%5Cleft%5C%7B%5Cbegin%7Bmatrix%7D%200%20%5C%20%2Cif%20%5C%20d%3E1%20%5C%20and%20%5C%20d%5E2%7Cn%5C%5C%20%28-1%29%5Ek%2Ck%3D%5Csum_ia_i%20%5C%20%2Cn%3D%5Cprod_i%20p_i%5E%7Ba_i%7D%20%5Cend%7Bmatrix%7D%5Cright.)
+
+其他常见数论函数
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20e%28n%29%3D%5Bn%3D1%5D)
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20id%28n%29%3Dn)
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%201%28n%29%3D1)
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20d%28n%29%3D%5Csum_%7Bd%7Cn%7D1)
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%5Csigma%20%28n%29%3D%5Csum_%7Bd%7Cn%7Dd)
+
+常见变换
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%5Csum_%7Bd%7Cn%7D%5Cvarphi%28d%29%3Dn%20~~~~id%20%3D%5Cvarphi%20%5Ctimes%201)
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%5Csum_%7Bd%7Cn%7D%5Cmu%28d%29%3De%20~~~~e%20%3D%5Cmu%20%5Ctimes%201)
+
+有了以上基础我们就来推式子了!!!
+
+1D gcd sum
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%5Csum_i%5En%20gcd%28i%2Cn%29%20%5C%5C~%3D%5Csum_i%5En%5Csum_%7Bd%7Ci%2Cn%7D%5Cvarphi%28d%29%20%5C%5C~%3D%5Csum_%7Bd%7Cn%7D%5Cvarphi%28d%29%5Cfrac%7Bn%7D%7Bd%7D)
+
+1..n中与n互质的数的个数
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%5Csum_i%5En%20e%28gcd%28i%2Cn%29%29%20%5C%5C~%3D%5Csum_i%5En%5Csum_%7Bd%7Ci%2Cn%7D%5Cmu%28d%29%20%5C%5C~%3D%5Csum_%7Bd%7Cn%7D%5Cmu%28d%29%5Cfrac%7Bn%7D%7Bd%7D)
+
+2D gcd sum
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%5Csum_i%5En%5Csum_j%5Em%20gcd%28i%2Cj%29%20%5C%5C~~%3D%5Csum_i%5En%5Csum_j%5Em%5Csum_%7Bd%7Ci%2Cj%7D%5Cvarphi%28d%29%20%5C%5C~~%3D%5Csum_%7Bd%5Cleqslant%20n%7D%5Cvarphi%28d%29%5Cleft%20%5Clfloor%20%5Cfrac%7Bn%7D%7Bd%7D%20%5Cright%20%5Crfloor%5Cleft%20%5Clfloor%20%5Cfrac%7Bm%7D%7Bd%7D%20%5Cright%20%5Crfloor)
+
+1..n和1..m中互质的数的对数
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%5Csum_i%5En%5Csum_j%5Em%20e%28gcd%28i%2Cj%29%29%20%5C%5C~~%3D%5Csum_i%5En%5Csum_j%5Em%5Csum_%7Bd%7Ci%2Cj%7D%5Cmu%28d%29%20%5C%5C~~%3D%5Csum_%7Bd%5Cleqslant%20n%7D%5Cmu%28d%29%5Cleft%20%5Clfloor%20%5Cfrac%7Bn%7D%7Bd%7D%20%5Cright%20%5Crfloor%5Cleft%20%5Clfloor%20%5Cfrac%7Bm%7D%7Bd%7D%20%5Cright%20%5Crfloor)
+
+约数和之和
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%5Csum_i%5En%20%5Csigma%20%28i%29%3D%5Csum_i%5Eni%5Cleft%20%5Clfloor%20%5Cfrac%7Bn%7D%7Bi%7D%20%5Cright%20%5Crfloor)
+
+公约数约数和
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%5Csum_i%5En%20%5Csigma%20%28gcd%28i%2Cj%29%29%20%5C%5C~~%3D%5Csum_i%5En%5Csum_%7Bd%7Ci%2Cn%7Dd%20%5C%5C~~%3D%5Csum_%7Bd%7Cn%7Dd%5Cfrac%7Bn%7D%7Bd%7D%20%5C%5C~~%3Dnd%28n%29)
+
+1..n中与n互质的数的和
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20g%28n%29%3D%5Csum_i%5Enie%28gcd%28i%2Cn%29%29%20%5C%5C~~~~~~~~~~~%3D%5Csum_i%5Eni%5Csum_%7Bd%7Ci%2Cn%7D%5Cmu%28d%29%20%5C%5C~~~~~~~~~~~%3D%5Csum_%7Bd%7Cn%7D%5Cmu%28d%29%5Csum_%7Bd%7Ci%2Ci%5Cleqslant%20n%7Di%20%5C%5C~~~~~~~~~~~%3D%5Csum_%7Bd%7Cn%7D%5Cmu%28d%29%5Cfrac%7Bn%28%5Cfrac%7Bn%7D%7Bd%7D&plus;1%29%7D%7B2%7D%20%5C%5C~~~~~~~~~~~%3D%5Cfrac%7Bn%7D%7B2%7D%28%5Cmu%20%5Ctimes%20id&plus;%5Cmu%20%5Ctimes%201%29%20%5C%5C~~~~~~~~~~~%3D%5Cfrac%7Bn%7D%7B2%7D%28%5Cvarphi%20&plus;%20e%29)
+
+1D lcm sum
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%5Csum_i%5En%20lcm%28i%2Cn%29%20%5C%5C~~%3Dn%5Csum_i%5En%5Cfrac%7Bi%7D%7Bgcd%28i%2Cn%29%7D%20%5C%5C~~%3Dn%5Csum_%7Bd%7Cn%7D%5Cfrac%7B%5Csum_%7Bi%5Cleqslant%20n%7Di%5Bgcd%28i%2Cn%29%3Dd%5D%7D%7Bd%7D%20%5C%5C~~%3Dn%5Csum_%7Bd%7Cn%7D%5Csum_j%5E%7B%5Cfrac%7Bn%7D%7Bd%7D%7Dje%28gcd%28j%2C%5Cfrac%7Bn%7D%7Bd%7D%29%29%20%5C%5C~~%3Dn%5Csum_%7Bd%7Cn%7Dg%28%5Cfrac%7Bn%7D%7Bd%7D%29%20%5C%5C~~%3Dn%28g%20%5Ctimes%201%29)
+
+1..n与1..m所有数对的乘积和
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20Sum%28n%2Cm%29%3D%5Csum_i%5En%5Csum_j%5Emij%20%5C%5C~~%3D%5Cfrac%7Bn%28n&plus;1%29m%28m&plus;1%29%29%7D%7B4%7D)
+
+1..n与1..m中互质的数对的乘积和
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20S%28n%2Cm%29%3D%5Csum_i%5En%5Csum_j%5Emije%28gcd%28i%2Cj%29%29%20%5C%5C~~~~~~~~~~~~~~~~%3D%5Csum_i%5En%5Csum_j%5Emij%5Csum_%7Bd%7Ci%2Cj%7D%5Cmu%28d%29%20%5C%5C~~~~~~~~~~~~~~~~%3D%5Csum_%7Bd%5Cleqslant%20n%7D%5Cmu%28d%29Sum%28%5Cleft%20%5Clfloor%20%5Cfrac%7Bn%7D%7Bd%7D%20%5Cright%20%5Crfloor%20%2C%5Cleft%20%5Clfloor%20%5Cfrac%7Bm%7D%7Bd%7D%20%5Cright%20%5Crfloor%29)
+
+2D lcm sum level 1
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20~lcm%20%5C%20sum%20%5C%20level%20%5C%201%20%5C%5C~~~~~~%5Csum_i%5En%5Csum_j%5Em%20lcm%28i%2Cj%29%20%5C%5C~~%3D%5Csum_i%5En%20%5Csum_j%5Em%20%5Cfrac%7Bij%7D%7Bgcd%28i%2Cj%29%7D%20%5C%5C~~%3D%5Csum_i%5En%20%5Csum_j%5Em%20%5Csum_%7Bd%7Ci%2Cj%7D%5Cfrac%7Bij%5Bgcd%28i%2Cj%29%3Dd%5D%7D%7Bd%7D%20%5C%5C~~%3D%5Csum_%7Bd%5Cleqslant%20n%7DdS%28%5Cleft%20%5Clfloor%20%5Cfrac%7Bn%7D%7Bd%7D%20%5Cright%20%5Crfloor%2C%5Cleft%20%5Clfloor%20%5Cfrac%7Bm%7D%7Bd%7D%20%5Cright%20%5Crfloor%29)
+
+我们定义一个函数
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20f%28n%29%3D%5Cfrac%7B1%7D%7Bn%7D)
+
+它不是整数……但很有用
+
+顺手定义
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20F%3Df%20%5Ctimes%20%5Cmu)
+
+即
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20f%3DF%20%5Ctimes%201)
+
+2D lcm sum level 2
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20~lcm%20%5C%20sum%20%5C%20level%20%5C%202%20%5C%5C~~~~~~%5Csum_i%5En%5Csum_j%5Em%20lcm%28i%2Cj%29%20%5C%5C~~%3D%5Csum_i%5En%20%5Csum_j%5Em%20ijf%28gcd%28i%2Cj%29%29%20%5C%5C~~%3D%5Csum_i%5En%20%5Csum_j%5Em%20ij%5Csum_%7Bd%7Ci%2Cj%7DF%28d%29%20%5C%5C~~%3D%5Csum_%7Bd%5Cleqslant%20n%7Dd%5E2F%28d%29Sum%28%5Cleft%20%5Clfloor%20%5Cfrac%7Bn%7D%7Bd%7D%20%5Cright%20%5Crfloor%2C%5Cleft%20%5Clfloor%20%5Cfrac%7Bm%7D%7Bd%7D%20%5Cright%20%5Crfloor%29%20%5C%5C~~%3D%5Csum_%7Bd%20%5Cleqslant%20n%7Dd%5E2%20%5Csum_%7Bd%27%7Cd%7D%20f%28d%27%29%20%5Cmu%28%5Cfrac%7Bn%7D%7Bd%27%7D%29Sum%28%5Cleft%20%5Clfloor%20%5Cfrac%7Bn%7D%7Bd%7D%20%5Cright%20%5Crfloor%2C%5Cleft%20%5Clfloor%20%5Cfrac%7Bm%7D%7Bd%7D%20%5Cright%20%5Crfloor%29%20%5C%5C~~%3D%5Csum_%7Bd%20%5Cleqslant%20n%7Dd%20%5Csum_%7Bd%27%7Cd%7D%20d%20f%28d%27%29%20%5Cmu%28%5Cfrac%7Bd%7D%7Bd%27%7D%29Sum%28%5Cleft%20%5Clfloor%20%5Cfrac%7Bn%7D%7Bd%7D%20%5Cright%20%5Crfloor%2C%5Cleft%20%5Clfloor%20%5Cfrac%7Bm%7D%7Bd%7D%20%5Cright%20%5Crfloor%29%20%5C%5C~~%3D%5Csum_%7Bd%20%5Cleqslant%20n%7Dd%20%5Csum_%7Bd%27%7Cd%7D%20%5Cfrac%7Bd%7D%7Bd%27%7D%20%5Cmu%28%5Cfrac%7Bd%7D%7Bd%27%7D%29Sum%28%5Cleft%20%5Clfloor%20%5Cfrac%7Bn%7D%7Bd%7D%20%5Cright%20%5Crfloor%2C%5Cleft%20%5Clfloor%20%5Cfrac%7Bm%7D%7Bd%7D%20%5Cright%20%5Crfloor%29%20%5C%5C~~%3D%5Csum_%7Bd%20%5Cleqslant%20n%7Did%20%28id%5Cmu%20%5Ctimes%201%29Sum%28%5Cleft%20%5Clfloor%20%5Cfrac%7Bn%7D%7Bd%7D%20%5Cright%20%5Crfloor%2C%5Cleft%20%5Clfloor%20%5Cfrac%7Bm%7D%7Bd%7D%20%5Cright%20%5Crfloor%29)
+
+上面这个式子最后一行的Sum前面应该加上"(d)"= = 、
+
+积性函数筛出来,分块统计
+
+怎样分块统计?
+
+n/d,m/d最多有sqrt(n)+sqrt(m)中取值
+
+f是非分块统计部分的[i,j]的区间和
+
+Sum代表的是一系列可以分块统计的函数
+
+
+
+```cpp
+for(int i=1,j;i<=n;i=j+1){
+	j=min(n/(n/i),m/(m/i));
+	ans+=(f[j]-f[i-1])*(Sum(n/i,m/i));
+}
+```
+
+怎样线性筛积性函数? 
+
+欧拉筛把积性函数![f(n)](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20f%28n%29)分成了三类
+
+A:n为质数
+
+B:n最小质因子为p且次数大于1
+
+C:n最小质因子为p且次数为1
+现在我们要计算一个积性函数![f(n)](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20f%28n%29)
+
+A:质数通常很简单,特判
+
+C:显然i与p互质那么![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20f%28ip%29%3Df%28i%29f%28p%29)
+B类比较复杂
+
+但显然
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20f%28n%29%3Df%28p%5Ek%29f%28%5Cfrac%7Bn%7D%7Bp%5Ek%7D%29)
+
+所以我们记录n的最小质因子的幂
+
+问题转化为如何求![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20f%28p%5Ek%29)
+
+这就与函数本身相关了
+
+比如
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%5Cvarphi%20%28p%5Ek%29%3Dp%5Ek-p%5E%7Bk-1%7D%20%5C%5C%20~~~~~%5Cmu%28p%5Ek%29%3D0)
+
+对于2D lcm sum level 2
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20id%5Cmu%20%5Ctimes%201%20%28p%5Ek%29%3Did%5Cmu%20%5Ctimes%201%20%28p%29)
+
+宇宙最快求和法
+
+求
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20S%28n%29%3D%5Csum_%7Bi%3D1%7D%5En%20f%28i%29)
+
+设
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20g%28n%29%3D%5Csum_%7Bd%7Cn%7Df%28d%29)
+
+那么
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20S%28n%29%3D%5Csum_%7Bi%3D1%7D%5Enf%28i%29%20%5C%5C~~~~~~~~~~~%3D%5Csum_%7Bi%3D1%7D%5En%28g%28i%29-%5Csum_%7Bd%7Ci%2Cd%5Cneq%20i%7Df%28d%29%29%20%5C%5C~~~~~~~~~~~%3D%5Csum_%7Bi%3D1%7D%5Eng%28i%29%20-%20%5Csum_%7Bi%3D2%7D%5EnS%28%5Cleft%20%5Clfloor%20%5Cfrac%7Bn%7D%7Bi%7D%20%5Cright%20%5Crfloor%29)
+
+在g函数前缀和O(1)计算的情况下,记忆化搜索可以证明复杂度是![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20O%28n%5E%7B%5Cfrac%7B3%7D%7B4%7D%7D%29),小范围预处理会得到更好的复杂度
+
+求
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%5CPhi%20%28n%29%3D%5Csum_i%5En%5Cvarphi%28i%29)
+
+用上述方法是可以做的
+
+不过具体数学说……
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%5Csum_%7Bd%5Cleqslant%20n%7D%5CPhi%28%5Cleft%20%5Clfloor%20%5Cfrac%7Bn%7D%7Bd%7D%20%5Cright%20%5Crfloor%29%3D%5Cfrac%7Bn%28n&plus;1%29%7D%7B2%7D)
+
+于是
+
+![img](http://latex.codecogs.com/gif.latex?%5Cdpi%7B150%7D%20%5CPhi%28n%29%3D%5Cfrac%7B1%7D%7B2%7D%5Csum_%7Bd%5Cleqslant%20n%7D%5Cmu%28d%29%5Cleft%20%5Clfloor%20%5Cfrac%7Bn%7D%7Bd%7D%20%5Cright%20%5Crfloor%5Cleft%20%5Clfloor%20%5Cfrac%7Bn%7D%7Bd%7D&plus;1%20%5Cright%20%5Crfloor)
+
+## 中国剩余定理
+
+```c++
+void exgcd(int a,int b,int &x,int &y) {
+    if(b==0) {
+        x=1;
+        y=0;
+        return ;
+    }
+    exgcd(b,a%b,x,y);
+    int tp=x;
+    x=y;
+    y=tp-(a/b)*y;
+}
+int china(int a[],int m[],int k) {   //ans=a[i] (mod m[i])
+    int ans=0,lcm=1,x,y;
+    for(int i=1;i<=k;i++)lcm*=m[i];
+    for(int i=1;i<=k;i++){
+        int tp=lcm/m[i];
+        exgcd(tp,m[i],x,y);
+        x=(x%m[i]+m[i])%m[i];
+        ans=(ans+tp*x*a[i])%lcm;
+    }
+    return (ans+lcm)%lcm;
+}
+```
+
+
 
 ## 高斯消元
 
